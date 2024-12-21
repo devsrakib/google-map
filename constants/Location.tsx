@@ -20,6 +20,11 @@ const locations: ILocation[] = [
       longitude: 91.1278,
       name: 'kobirhat'
     },
+    {
+      latitude: 24.3682,
+      longitude: 88.6376,
+      name: 'rajshahi'
+    }
 ];
   
   export default locations;
