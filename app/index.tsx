@@ -3,8 +3,8 @@ import MapView, { Callout, Marker, PROVIDER_GOOGLE, Region } from 'react-native-
 import { Alert, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from 'expo-router';
 import * as Location from 'expo-location';
-import locations from '@/constants/Location'; // Assuming locations includes lat, lng, and name
-import * as TaskManager from 'expo-task-manager';
+import locations from '@/constants/Location';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 const GEOFENCING_TASK = 'GEOFENCING_TASK';
 
@@ -25,39 +25,70 @@ export default function App() {
   const [destination, setDestination] = useState(null);
   const [isTracking, setIsTracking] = useState(false);
 
+  // useEffect(() => {
+  //   (async () => {
+  //     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+  //     if (foregroundStatus !== 'granted') {
+  //       alert('Permission to access location was denied');
+  //       return;
+  //     }
+
+  //     const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+  //     if (backgroundStatus !== 'granted') {
+  //       alert('Permission to access background location was denied');
+  //     }
+
+  //     // Fetch initial location
+  //     const location = await Location.getCurrentPositionAsync({});
+  //     setCurrentLocation(location.coords);
+
+  //     // Start geofencing
+  //     Location.startGeofencingAsync(GEOFENCING_TASK, locations.map((loc) => ({
+  //       latitude: loc.latitude,
+  //       longitude: loc.longitude,
+  //       radius: 500, // Adjust radius as needed
+  //     })));
+  //   })();
+
+  //   // Periodically update location every 10 minutes
+  //   const interval = setInterval(async () => {
+  //     const location = await Location.getCurrentPositionAsync({});
+  //     setCurrentLocation(location.coords);
+  //   }, 600000); // 10 minutes
+
+  //   return () => clearInterval(interval);
+  // }, []);
+
+
   useEffect(() => {
     (async () => {
-      const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
-      if (foregroundStatus !== 'granted') {
-        alert('Permission to access location was denied');
-        return;
+      try {
+        const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+        if (foregroundStatus !== 'granted') {
+          Alert.alert('Permission Denied', 'Location access is required to use this feature.');
+          return;
+        }
+  
+        const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+        if (backgroundStatus !== 'granted') {
+          Alert.alert('Background Permission Denied', 'Geofencing requires background location access.');
+        }
+  
+        const location = await Location.getCurrentPositionAsync({});
+        setCurrentLocation(location.coords);
+  
+        Location.startGeofencingAsync(GEOFENCING_TASK, locations.map((loc) => ({
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          radius: 500,
+        })));
+      } catch (error) {
+        Alert.alert('Error', 'Failed to initialize location services.');
+        console.error(error);
       }
-
-      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-      if (backgroundStatus !== 'granted') {
-        alert('Permission to access background location was denied');
-      }
-
-      // Fetch initial location
-      const location = await Location.getCurrentPositionAsync({});
-      setCurrentLocation(location.coords);
-
-      // Start geofencing
-      Location.startGeofencingAsync(GEOFENCING_TASK, locations.map((loc) => ({
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-        radius: 500, // Adjust radius as needed
-      })));
     })();
-
-    // Periodically update location every 10 minutes
-    const interval = setInterval(async () => {
-      const location = await Location.getCurrentPositionAsync({});
-      setCurrentLocation(location.coords);
-    }, 600000); // 10 minutes
-
-    return () => clearInterval(interval);
   }, []);
+  
 
    const handleSearch = async () => {
     if (!searchQuery) {
@@ -104,6 +135,22 @@ export default function App() {
     );
   };
 
+  const centerUserLocation = () => {
+    if (currentLocation && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          latitudeDelta: 0.01, // Adjust for zoom level
+          longitudeDelta: 0.01,
+        },
+        1000 // Animation duration in milliseconds
+      );
+    } else {
+      Alert.alert('Error', 'Current location is not available.');
+    }
+  };
+  
 
   return (
     <View style={styles.container}>
@@ -153,6 +200,13 @@ export default function App() {
           <Text style={styles.startButtonText}>Start Navigation</Text>
         </TouchableOpacity>
       )}
+
+<TouchableOpacity
+        style={styles.locationButton}
+        onPress={centerUserLocation}
+      >
+        <MaterialIcons name="center-focus-strong" size={24} color="black" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -204,7 +258,7 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: '50%',
     transform: [{ translateX: -50 }],
-    backgroundColor: '#FF6347',
+    backgroundColor: 'blue',
     padding: 15,
     borderRadius: 10,
   },
@@ -212,6 +266,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  locationButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#ffffff',
+    padding: 10,
+    borderRadius: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
 });
 
